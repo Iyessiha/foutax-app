@@ -3,6 +3,7 @@ import { AuthProvider, useAuth, FOUTAX_THEME as T } from "./context/AuthContext"
 import { XPToast, XPBar } from "./components/XPToast";
 import AuthPage from "./pages/AuthPage";
 import UserProfile from "./pages/UserProfile";
+import { SpeedInsights } from "@vercel/speed-insights/react";
 
 // Navbar
 function Navbar({ active, setActive }) {
@@ -422,6 +423,7 @@ export default function App() {
         select option { background: #0F1F38; }
       `}</style>
       <AppInner />
+      <SpeedInsights />
     </AuthProvider>
   );
 }
