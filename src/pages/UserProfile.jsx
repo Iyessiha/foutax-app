@@ -1,4 +1,5 @@
-import { useAuth, LEVELS, T } from "../context/AuthContext";
+import { useAuth, LEVELS } from "../context/AuthContext";
+import { T } from "../context/theme";
 
 const ALL_BADGES = [
   { id:"first_buy",    icon:"📈", name:"Premier Achat" },
@@ -24,7 +25,7 @@ export default function UserProfile({ onClose }) {
   const fmt = n => (n || 0).toLocaleString("fr-FR");
 
   return (
-    <div style={{ background: T.night, border: "1px solid " + T.border, borderRadius: 16, overflow: "hidden", maxWidth: 420, boxShadow: "0 24px 60px rgba(0,0,0,.6)" }}>
+    <div role="dialog" aria-label="Profil utilisateur" style={{ background: T.night, border: "1px solid " + T.border, borderRadius: 16, overflow: "hidden", maxWidth: 420, width: "min(96vw,420px)", boxShadow: "0 24px 60px rgba(0,0,0,.6)" }}>
       <div style={{ background: T.navy, padding: "18px 18px 14px", position: "relative" }}>
         <div style={{ position: "absolute", top: 0, left: 0, right: 0, height: 2, background: "linear-gradient(90deg," + T.gold + ",transparent)" }} />
         {onClose && (
@@ -95,7 +96,7 @@ export default function UserProfile({ onClose }) {
           </div>
         </div>
 
-        <button onClick={logout} style={{ width: "100%", padding: "10px", background: "transparent", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 8, fontSize: 13, cursor: "pointer", color: T.muted, fontFamily: T.dm }}>
+        <button aria-label="Se deconnecter" onClick={logout} style={{ width: "100%", padding: "10px", background: "transparent", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 8, fontSize: 13, cursor: "pointer", color: T.muted, fontFamily: T.dm }}>
           Se deconnecter
         </button>
       </div>

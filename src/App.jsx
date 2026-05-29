@@ -1,24 +1,6 @@
-import { useState } from "react";
-import { AuthProvider, useAuth, FOUTAX_THEME as T } from "./context/AuthContext";
-import { XPToast, XPBar } from "./components/XPToast";
-import AuthPage from "./pages/AuthPage";
-import UserProfile from "./pages/UserProfile";
-import { SpeedInsights } from "@vercel/speed-insights/react";
-
-const css = `
-  @import url('https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:wght@300;400;500;600&display=swap');
-  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-  body { background: #0A1628; color: #fff; font-family: 'DM Sans', sans-serif; -webkit-font-smoothing: antialiased; }
-  ::-webkit-scrollbar { width: 5px; } ::-webkit-scrollbar-track { background: #0A1628; }
-  ::-webkit-scrollbar-thumb { background: #2A3A55; border-radius: 3px; }
-  ::-webkit-scrollbar-thumb:hover { background: #E8A020; }
-  input::placeholder { color: rgba(255,255,255,0.2); }
-  select option { background: #0F1F38; color: #fff; }
-  ::selection { background: rgba(232,160,32,0.3); }
-  button { cursor: pointer; font-family: 'DM Sans', sans-serif; }
-  * { -webkit-tap-highlight-color: transparent; }
 import { useState, useEffect, useRef, useCallback } from "react";
-import { AuthProvider, useAuth, T, LEVELS, levelOf } from "./context/AuthContext";
+import { AuthProvider, useAuth, LEVELS, levelOf } from "./context/AuthContext";
+import { T } from "./context/theme";
 
 // ─── CSS GLOBAL ───────────────────────────────────────────────────────────────
 const CSS = `
@@ -280,13 +262,22 @@ function Toast() {
 
 // ─── AUTH PAGE ────────────────────────────────────────────────────────────────
 function AuthPage() {
-  const {register, login} = useAuth();
+  const {register, login, ping} = useAuth();
   const [mode, setMode] = useState("login");
   const [form, setForm] = useState({name:"",email:"",password:"",confirm:"",country:"CI"});
   const [errs, setErrs] = useState({});
   const [loading, setLoading] = useState(false);
   const [serverErr, setServerErr] = useState("");
   const set = k => e => setForm(f=>({...f,[k]:e.target.value}));
+
+  useEffect(()=>{
+    // autofocus email on mount
+    const t = setTimeout(()=>{
+      const el = document.getElementById('field-email');
+      if(el && typeof el.focus === 'function') el.focus();
+    }, 60);
+    return ()=>clearTimeout(t);
+  }, []);
 
   const validate = () => {
     const e={};
@@ -299,12 +290,24 @@ function AuthPage() {
 
   const submit = async () => {
     const e=validate(); setErrs(e);
-    if(Object.keys(e).length) return;
+    if(Object.keys(e).length) {
+      // focus first invalid field for accessibility
+      const first = Object.keys(e)[0];
+      setTimeout(()=>{
+        const el = document.getElementById(`field-${first}`);
+        if(el && typeof el.focus === 'function') el.focus();
+      }, 40);
+      return;
+    }
     setLoading(true); setServerErr("");
     try {
       if(mode==="register") await register(form);
       else await login(form);
-    } catch(err) { setServerErr(err.message); }
+      // success: clear server error
+      setServerErr("");
+      // focus body to move context on success
+      setTimeout(()=>{document.body.focus();},100);
+    } catch(err) { setServerErr(err.message); if(typeof ping==='function') ping(err.message, 0, 'error'); }
     finally { setLoading(false); }
   };
 
@@ -320,8 +323,10 @@ function AuthPage() {
       <div style={{marginBottom:14}}>
         <div style={{fontSize:10, color:T.muted, fontWeight:600, textTransform:"uppercase", letterSpacing:"0.7px", marginBottom:5}}>{label}</div>
         {children || <input
-          type={type} value={form[k]} onChange={set(k)} placeholder={placeholder}
+          id={`field-${k}`} type={type} value={form[k]} onChange={set(k)} placeholder={placeholder}
           onFocus={()=>setFocus(true)} onBlur={()=>setFocus(false)}
+          aria-invalid={!!errs[k]}
+          aria-describedby={errs[k]?`err-${k}`:undefined}
           style={{
             width:"100%", padding:"11px 14px", borderRadius:10, fontSize:13,
             background:"rgba(255,255,255,0.05)", color:T.white, outline:"none",
@@ -329,16 +334,16 @@ function AuthPage() {
             transition:"border .2s",
           }}
         />}
-        {errs[k] && <div style={{fontSize:11, color:T.red, marginTop:4}}>{errs[k]}</div>}
+        {errs[k] && <div id={`err-${k}`} style={{fontSize:11, color:T.red, marginTop:4}}>{errs[k]}</div>}
       </div>
     );
   };
 
   return (
-    <div style={{minHeight:"100vh", display:"flex"}}>
+    <div className="fx-auth-layout" style={{minHeight:"100vh", display:"flex"}}>
       <style>{CSS}</style>
       {/* Panel gauche branding */}
-      <div style={{
+      <div className="fx-auth-left" style={{
         flex:1, background:`linear-gradient(145deg,${T.night} 0%,${T.navy2} 100%)`,
         display:"flex", flexDirection:"column", justifyContent:"center",
         padding:"48px 44px", position:"relative", overflow:"hidden",
@@ -400,7 +405,7 @@ function AuthPage() {
       </div>
 
       {/* Panel droit formulaire */}
-      <div style={{width:460,background:T.navy,display:"flex",alignItems:"center",justifyContent:"center",padding:"40px 36px"}}>
+      <div className="fx-auth-right" style={{width:460,background:T.navy,display:"flex",alignItems:"center",justifyContent:"center",padding:"40px 36px"}}>
         <div style={{width:"100%",maxWidth:370}}>
           <div style={{marginBottom:28}}>
             <h2 style={{fontFamily:T.syne,fontSize:26,fontWeight:800,color:T.white,marginBottom:6,letterSpacing:"-0.5px"}}>
@@ -412,7 +417,7 @@ function AuthPage() {
           </div>
 
           {serverErr && (
-            <div style={{background:T.redBg,border:`1px solid ${T.red}44`,borderRadius:10,padding:"10px 14px",fontSize:12,color:T.red,marginBottom:16}}>
+            <div role="alert" style={{background:T.redBg,border:`1px solid ${T.red}44`,borderRadius:10,padding:"10px 14px",fontSize:12,color:T.red,marginBottom:16}}>
               {serverErr}
             </div>
           )}
@@ -431,7 +436,9 @@ function AuthPage() {
 
           {mode==="login" && (
             <div style={{textAlign:"right",marginBottom:16,marginTop:-6}}>
-              <span style={{fontSize:12,color:T.gold,cursor:"pointer"}}>Mot de passe oublié ?</span>
+              <button onClick={()=>{ if(typeof ping==='function') ping('Fonctionnalité non implémentée',0,'error'); }} style={{fontSize:12,color:T.gold,cursor:"pointer",background:"transparent",border:"none"}}>
+                Mot de passe oublié ?
+              </button>
             </div>
           )}
 
@@ -475,6 +482,13 @@ function Navbar({active, setActive}) {
 
   const go = id => { setActive(id); setMenu(false); setNotifOpen(false); setProfOpen(false); };
 
+  // close mobile menu on Escape
+  useEffect(() => {
+    const onKey = (e) => { if (e.key === 'Escape') setMenu(false); };
+    if (menu) window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [menu]);
+
   return (
     <>
       <nav style={{
@@ -492,7 +506,7 @@ function Navbar({active, setActive}) {
           </div>
 
           {/* Desktop tabs */}
-          <div style={{display:"flex",gap:1,alignItems:"center"}}>
+          <div className="fx-desktop-tabs" style={{display:"flex",gap:1,alignItems:"center"}}>
             {TABS.map(t=>(
               <button key={t.id} onClick={()=>go(t.id)} style={{
                 background:active===t.id?T.goldBg:"transparent",
@@ -557,28 +571,33 @@ function Navbar({active, setActive}) {
           </div>
         </div>
 
-        {/* Mobile menu */}
+        {/* Mobile menu (drawer) */}
         {menu && (
-          <div style={{background:T.night,borderTop:`1px solid ${T.border}`,padding:"8px 12px 16px"}}>
-            <div style={{marginBottom:12}}><XPBar xp={user?.xp||0} compact/></div>
-            {TABS.map(t=>(
-              <button key={t.id} onClick={()=>go(t.id)} style={{
-                display:"flex",alignItems:"center",gap:12,width:"100%",
-                padding:"12px 14px",marginBottom:4,borderRadius:10,
-                background:active===t.id?T.goldBg:"rgba(255,255,255,0.03)",
-                border:active===t.id?`1px solid ${T.gold}25`:"1px solid transparent",
-                color:active===t.id?T.gold:T.off,
-                fontSize:14,fontWeight:active===t.id?700:400,textAlign:"left",
-              }}>
-                <i className={`ti ${t.icon}`} style={{fontSize:18}}/>{t.label}
-              </button>
-            ))}
+          <div role="dialog" aria-label="Menu" className="fx-drawer" onClick={()=>setMenu(false)}>
+            <div className="fx-drawer-card" onClick={e=>e.stopPropagation()}>
+              <div style={{marginBottom:12}}><XPBar xp={user?.xp||0} compact/></div>
+              {TABS.map(t=>(
+                <button key={t.id} onClick={()=>go(t.id)} style={{
+                  display:"flex",alignItems:"center",gap:12,width:"100%",
+                  padding:"12px 14px",marginBottom:8,borderRadius:10,textAlign:"left",
+                  background:active===t.id?T.goldBg:"transparent",
+                  border:active===t.id?`1px solid ${T.gold}25`:`1px solid transparent`,
+                  color:active===t.id?T.gold:T.off,fontSize:15,fontWeight:active===t.id?700:600,
+                }}>
+                  <i className={`ti ${t.icon}`} style={{fontSize:18}}/>
+                  {t.label}
+                </button>
+              ))}
+              <div style={{marginTop:8,display:"flex",gap:8}}>
+                <Btn variant="outline" onClick={()=>setMenu(false)}>Fermer</Btn>
+              </div>
+            </div>
           </div>
         )}
       </nav>
 
       {/* Bottom nav mobile */}
-      <div style={{position:"fixed",bottom:0,left:0,right:0,background:"rgba(6,14,26,0.98)",backdropFilter:"blur(20px)",borderTop:`1px solid ${T.border}`,display:"flex",zIndex:150,padding:"4px 0 max(8px,env(safe-area-inset-bottom))"}}>
+      <div className="fx-mobile-bottom" style={{position:"fixed",bottom:0,left:0,right:0,background:"rgba(6,14,26,0.98)",backdropFilter:"blur(20px)",borderTop:`1px solid ${T.border}`,display:"flex",zIndex:150,padding:"4px 0 max(8px,env(safe-area-inset-bottom))"}}>
         {TABS.map(t=>(
           <button key={t.id} onClick={()=>go(t.id)} style={{
             flex:1,display:"flex",flexDirection:"column",alignItems:"center",gap:3,
