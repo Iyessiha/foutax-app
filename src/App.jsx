@@ -1,3 +1,22 @@
+import { useState } from "react";
+import { AuthProvider, useAuth, FOUTAX_THEME as T } from "./context/AuthContext";
+import { XPToast, XPBar } from "./components/XPToast";
+import AuthPage from "./pages/AuthPage";
+import UserProfile from "./pages/UserProfile";
+import { SpeedInsights } from "@vercel/speed-insights/react";
+
+const css = `
+  @import url('https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:wght@300;400;500;600&display=swap');
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: #0A1628; color: #fff; font-family: 'DM Sans', sans-serif; -webkit-font-smoothing: antialiased; }
+  ::-webkit-scrollbar { width: 5px; } ::-webkit-scrollbar-track { background: #0A1628; }
+  ::-webkit-scrollbar-thumb { background: #2A3A55; border-radius: 3px; }
+  ::-webkit-scrollbar-thumb:hover { background: #E8A020; }
+  input::placeholder { color: rgba(255,255,255,0.2); }
+  select option { background: #0F1F38; color: #fff; }
+  ::selection { background: rgba(232,160,32,0.3); }
+  button { cursor: pointer; font-family: 'DM Sans', sans-serif; }
+  * { -webkit-tap-highlight-color: transparent; }
 import { useState, useEffect, useRef, useCallback } from "react";
 import { AuthProvider, useAuth, T, LEVELS, levelOf } from "./context/AuthContext";
 
@@ -1770,5 +1789,23 @@ function Inner() {
 }
 
 export default function App() {
+  return (
+    <AuthProvider>
+      <style>{`
+        @import url('https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:wght@300;400;500;600&display=swap');
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+        body { background: #0A1628; color: #FFFFFF; }
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: #0A1628; }
+        ::-webkit-scrollbar-thumb { background: #2A3A55; border-radius: 3px; }
+        ::-webkit-scrollbar-thumb:hover { background: #E8A020; }
+        input::placeholder { color: rgba(255,255,255,0.2); }
+        select option { background: #0F1F38; }
+      `}</style>
+      <AppInner />
+      <SpeedInsights />
+    </AuthProvider>
+  );
+  return <AuthProvider><AppInner /></AuthProvider>;
   return <AuthProvider><Inner/></AuthProvider>;
 }
