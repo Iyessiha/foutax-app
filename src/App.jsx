@@ -1,55 +1,7 @@
-import { useState } from "react";
-import { AuthProvider, useAuth, FOUTAX_THEME as T } from "./context/AuthContext";
-import { XPToast, XPBar } from "./components/XPToast";
-import AuthPage from "./pages/AuthPage";
-import UserProfile from "./pages/UserProfile";
-import { SpeedInsights } from "@vercel/speed-insights/react";
-
-const css = `
-  @import url('https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:wght@300;400;500;600&display=swap');
-  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-  body { background: #0A1628; color: #fff; font-family: 'DM Sans', sans-serif; -webkit-font-smoothing: antialiased; }
-  ::-webkit-scrollbar { width: 5px; } ::-webkit-scrollbar-track { background: #0A1628; }
-  ::-webkit-scrollbar-thumb { background: #2A3A55; border-radius: 3px; }
-  ::-webkit-scrollbar-thumb:hover { background: #E8A020; }
-  input::placeholder { color: rgba(255,255,255,0.2); }
-  select option { background: #0F1F38; color: #fff; }
-  ::selection { background: rgba(232,160,32,0.3); }
-  button { cursor: pointer; font-family: 'DM Sans', sans-serif; }
-  * { -webkit-tap-highlight-color: transparent; }
 import { useState, useEffect, useRef, useCallback } from "react";
 import { AuthProvider, useAuth, T, LEVELS, levelOf } from "./context/AuthContext";
 
-// ─── CSS GLOBAL ───────────────────────────────────────────────────────────────
-const CSS = `
-*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
-html{scroll-behavior:smooth}
-body{background:#0A1628;color:#fff;font-family:'DM Sans',sans-serif;-webkit-font-smoothing:antialiased;overflow-x:hidden}
-::-webkit-scrollbar{width:4px}::-webkit-scrollbar-track{background:#0A1628}
-::-webkit-scrollbar-thumb{background:#1E3A5F;border-radius:2px}
-::-webkit-scrollbar-thumb:hover{background:#E8A020}
-button{cursor:pointer;font-family:'DM Sans',sans-serif;transition:all .18s ease}
-input,select,textarea{font-family:'DM Sans',sans-serif}
-input::placeholder{color:rgba(255,255,255,0.25)}
-select option{background:#0C1D35;color:#fff}
-::selection{background:rgba(232,160,32,0.3)}
-*{-webkit-tap-highlight-color:transparent}
-@keyframes fadeUp{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:translateY(0)}}
-@keyframes fadeIn{from{opacity:0}to{opacity:1}}
-@keyframes scaleIn{from{opacity:0;transform:scale(.92)}to{opacity:1;transform:scale(1)}}
-@keyframes slideRight{from{transform:translateX(-100%)}to{transform:translateX(0)}}
-@keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
-@keyframes spin{to{transform:rotate(360deg)}}
-@keyframes bounce{0%,100%{transform:translateY(0)}50%{transform:translateY(-8px)}}
-@keyframes countUp{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}
-@keyframes glow{0%,100%{box-shadow:0 0 8px rgba(232,160,32,.3)}50%{box-shadow:0 0 20px rgba(232,160,32,.6)}}
-@keyframes starPop{0%{transform:scale(0)rotate(-30deg)}60%{transform:scale(1.3)rotate(5deg)}100%{transform:scale(1)rotate(0)}}
-@keyframes barFill{from{width:0}to{width:var(--w)}}
-.animate-up{animation:fadeUp .4s ease forwards}
-.animate-in{animation:scaleIn .3s ease forwards}
-.animate-count{animation:countUp .5s ease forwards}
-.glow-gold{animation:glow 2s ease infinite}
-`;
+
 
 // ─── DATA ─────────────────────────────────────────────────────────────────────
 const STOCKS = [
@@ -334,7 +286,7 @@ function AuthPage() {
 
   return (
     <div style={{minHeight:"100vh", display:"flex"}}>
-      <style>{CSS}</style>
+      
       {/* Panel gauche branding */}
       <div style={{
         flex:1, background:`linear-gradient(145deg,${T.night} 0%,${T.navy2} 100%)`,
@@ -1745,7 +1697,7 @@ function PremiumPage() {
 function Loading() {
   return (
     <div style={{minHeight:"100vh",display:"flex",alignItems:"center",justifyContent:"center",background:T.night}}>
-      <style>{CSS}</style>
+      
       <div style={{textAlign:"center"}}>
         <div style={{width:56,height:56,borderRadius:14,background:T.gold,display:"flex",alignItems:"center",justifyContent:"center",fontFamily:T.syne,fontSize:20,fontWeight:800,color:T.night,margin:"0 auto 16px",boxShadow:`0 0 30px ${T.gold}40`,animation:"glow 2s infinite"}}>FX</div>
         <div style={{fontFamily:T.syne,fontSize:22,fontWeight:800,color:T.white,letterSpacing:"-0.5px"}}>Fouta<span style={{color:T.gold}}>X</span></div>
@@ -1789,23 +1741,5 @@ function Inner() {
 }
 
 export default function App() {
-  return (
-    <AuthProvider>
-      <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:wght@300;400;500;600&display=swap');
-        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-        body { background: #0A1628; color: #FFFFFF; }
-        ::-webkit-scrollbar { width: 6px; }
-        ::-webkit-scrollbar-track { background: #0A1628; }
-        ::-webkit-scrollbar-thumb { background: #2A3A55; border-radius: 3px; }
-        ::-webkit-scrollbar-thumb:hover { background: #E8A020; }
-        input::placeholder { color: rgba(255,255,255,0.2); }
-        select option { background: #0F1F38; }
-      `}</style>
-      <AppInner />
-      <SpeedInsights />
-    </AuthProvider>
-  );
-  return <AuthProvider><AppInner /></AuthProvider>;
   return <AuthProvider><Inner/></AuthProvider>;
 }
