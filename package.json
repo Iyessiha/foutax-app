@@ -1,7 +1,7 @@
 {
   "name": "foutax-app",
-  "version": "1.0.0",
-  "description": "FoutaX - Plateforme fintech educative UEMOA - Invest - Learn - Grow",
+  "version": "2.0.0",
+  "description": "FoutaX v2 - Plateforme fintech educative UEMOA professionnelle",
   "type": "module",
   "scripts": {
     "dev": "vite",

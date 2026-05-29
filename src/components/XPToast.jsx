@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { useAuth, LEVELS, FOUTAX_THEME as T } from "../context/AuthContext";
+import { useAuth, LEVELS, T } from "../context/AuthContext";
 
 export function XPToast() {
   const { toast } = useAuth();
@@ -12,38 +12,37 @@ export function XPToast() {
 
   if (!visible && !toast) return null;
 
-  const configs = {
-    xp:      { bg: "rgba(232,160,32,0.15)", border: T.gold,     text: T.gold,     prefix: "+" },
-    streak:  { bg: "rgba(232,160,32,0.12)", border: T.goldDark, text: T.goldDark, prefix: "🔥 +" },
-    levelup: { bg: "rgba(61,207,142,0.12)", border: T.green,    text: T.green,    prefix: "🎉 " },
-    badge:   { bg: "rgba(127,119,221,0.12)",border: "#7F77DD",  text: "#A89EEE",  prefix: "🏅 " },
-    success: { bg: "rgba(61,207,142,0.12)", border: T.green,    text: T.green,    prefix: "✓ " },
+  const cfgs = {
+    xp:      { border: T.gold,    text: T.gold,    prefix: "+" },
+    streak:  { border: "#F97316", text: "#F97316",  prefix: "🔥 +" },
+    levelup: { border: T.green,   text: T.green,   prefix: "🎉 " },
+    badge:   { border: T.purple,  text: "#A78BFA",  prefix: "🏅 " },
+    success: { border: T.green,   text: T.green,   prefix: "✓ " },
   };
-  const cfg = configs[toast?.type] || configs.xp;
+  const cfg = cfgs[toast ? toast.type : "xp"] || cfgs.xp;
 
   return (
     <div style={{
-      position: "fixed", bottom: 24, right: 24, zIndex: 9999,
-      background: T.navy, border: `1px solid ${cfg.border}`,
-      borderRadius: 12, padding: "12px 16px",
+      position: "fixed", bottom: 80, right: 16, zIndex: 9999,
+      background: "#0F2240",
+      border: "1px solid " + cfg.border + "44",
+      borderRadius: 14, padding: "12px 16px",
       display: "flex", alignItems: "center", gap: 12,
-      minWidth: 220, maxWidth: 320,
+      minWidth: 220, maxWidth: 310,
       opacity: toast ? 1 : 0,
       transform: toast ? "translateY(0)" : "translateY(16px)",
-      transition: "opacity .3s, transform .3s",
+      transition: "all .3s",
       pointerEvents: "none",
-      boxShadow: `0 8px 32px rgba(0,0,0,0.4), 0 0 0 1px ${cfg.border}22`,
     }}>
-      <div style={{ flex: 1 }}>
-        <div style={{ fontSize: 13, fontWeight: 500, color: T.white, lineHeight: 1.3, fontFamily: T.fonts.body }}>
-          {toast?.msg}
-        </div>
+      <div style={{ flex: 1, fontSize: 13, color: T.white, fontWeight: 500 }}>
+        {toast ? toast.msg : ""}
       </div>
-      {toast?.xp > 0 && (
+      {toast && toast.xp > 0 && (
         <div style={{
-          background: cfg.border, color: T.night, fontSize: 11,
-          fontWeight: 800, padding: "4px 10px", borderRadius: 20,
-          whiteSpace: "nowrap", flexShrink: 0, fontFamily: T.fonts.display,
+          background: cfg.border, color: T.night,
+          fontSize: 11, fontWeight: 800,
+          padding: "3px 10px", borderRadius: 20,
+          fontFamily: T.syne, flexShrink: 0,
         }}>
           {cfg.prefix}{toast.xp} XP
         </div>
@@ -52,35 +51,37 @@ export function XPToast() {
   );
 }
 
-export function XPBar({ xp, compact = false }) {
-  const { getLevelInfo } = useAuth();
-  const { current, next, progress, xpToNext } = getLevelInfo(xp);
+export function XPBar({ xp, compact }) {
+  const { levelOf } = useAuth();
+  const info = levelOf(xp || 0);
+  const cur = info.cur;
+  const nxt = info.nxt;
+  const pct = info.pct;
+  const toNext = info.toNext;
+
+  const fmt = (n) => (n || 0).toLocaleString("fr-FR");
 
   if (compact) {
     return (
       <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
         <div style={{
-          width: 26, height: 26, borderRadius: "50%",
-          background: "rgba(232,160,32,0.15)", border: `1px solid ${T.gold}44`,
-          color: T.gold, fontSize: 10, fontWeight: 800,
+          width: 26, height: 26, borderRadius: "50%", flexShrink: 0,
+          background: T.goldBg,
+          border: "1.5px solid " + T.gold + "44",
           display: "flex", alignItems: "center", justifyContent: "center",
-          flexShrink: 0, fontFamily: T.fonts.display,
+          fontSize: 10, fontWeight: 800, color: T.gold, fontFamily: T.syne,
         }}>
-          N{current.level}
+          N{cur.level}
         </div>
         <div style={{ flex: 1, minWidth: 0 }}>
           <div style={{ display: "flex", justifyContent: "space-between", fontSize: 10, marginBottom: 3 }}>
-            <span style={{ color: T.white, fontWeight: 600, fontFamily: T.fonts.body }}>
-              {current.icon} {current.name}
-            </span>
-            <span style={{ color: T.gray2, fontFamily: T.fonts.body }}>
-              {xp.toLocaleString("fr-FR")} XP
-            </span>
+            <span style={{ color: T.white, fontWeight: 600 }}>{cur.icon} {cur.name}</span>
+            <span style={{ color: T.muted }}>{fmt(xp)} XP</span>
           </div>
-          <div style={{ background: "rgba(255,255,255,0.1)", borderRadius: 4, height: 4 }}>
+          <div style={{ background: "rgba(255,255,255,0.1)", borderRadius: 3, height: 4 }}>
             <div style={{
-              width: `${progress}%`, height: 4, borderRadius: 4,
-              background: T.gold, transition: "width .6s ease",
+              width: pct + "%", height: 4, borderRadius: 3,
+              background: T.gold, transition: "width .6s",
             }} />
           </div>
         </div>
@@ -90,50 +91,48 @@ export function XPBar({ xp, compact = false }) {
 
   return (
     <div style={{
-      background: T.navy, border: `1px solid rgba(255,255,255,0.07)`,
+      background: T.card,
+      border: "1px solid " + T.border,
       borderRadius: 12, padding: "16px 18px",
     }}>
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
         <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
           <div style={{
-            width: 42, height: 42, borderRadius: "50%",
-            background: "rgba(232,160,32,0.12)", border: `1.5px solid ${T.gold}44`,
-            color: T.gold, fontSize: 14, fontWeight: 800,
+            width: 44, height: 44, borderRadius: "50%",
+            background: T.goldBg,
+            border: "1.5px solid " + T.gold + "44",
             display: "flex", alignItems: "center", justifyContent: "center",
-            fontFamily: T.fonts.display,
+            fontSize: 14, fontWeight: 800, color: T.gold, fontFamily: T.syne,
           }}>
-            N{current.level}
+            N{cur.level}
           </div>
           <div>
-            <div style={{ fontSize: 15, fontWeight: 700, color: T.white, fontFamily: T.fonts.display }}>
-              {current.icon} {current.name}
+            <div style={{ fontSize: 15, fontWeight: 700, color: T.white, fontFamily: T.syne }}>
+              {cur.icon} {cur.name}
             </div>
-            <div style={{ fontSize: 11, color: T.gray2, fontFamily: T.fonts.body }}>
-              Niveau {current.level} / 8
-            </div>
+            <div style={{ fontSize: 11, color: T.muted }}>Niveau {cur.level} / 8</div>
           </div>
         </div>
         <div style={{ textAlign: "right" }}>
-          <span style={{ fontFamily: T.fonts.display, fontWeight: 700, color: T.white, fontSize: 18 }}>
-            {xp.toLocaleString("fr-FR")}
-          </span>
-          <span style={{ fontSize: 12, color: T.gray2, fontFamily: T.fonts.body }}>
-            {" "}/ {next ? next.xpMin.toLocaleString("fr-FR") : "MAX"} XP
-          </span>
+          <div style={{ fontSize: 20, fontWeight: 800, color: T.white, fontFamily: T.syne }}>
+            {fmt(xp)}
+          </div>
+          <div style={{ fontSize: 10, color: T.muted }}>
+            / {nxt ? fmt(nxt.xpMin) : "MAX"} XP
+          </div>
         </div>
       </div>
-      <div style={{ background: "rgba(255,255,255,0.08)", borderRadius: 6, height: 8, marginBottom: 8 }}>
+      <div style={{ background: "rgba(255,255,255,0.08)", borderRadius: 6, height: 8, marginBottom: 7 }}>
         <div style={{
-          width: `${progress}%`, height: 8, borderRadius: 6,
-          background: `linear-gradient(90deg, ${T.goldDark}, ${T.gold})`,
-          transition: "width .6s ease",
-          boxShadow: `0 0 8px ${T.gold}66`,
+          width: pct + "%", height: 8, borderRadius: 6,
+          background: "linear-gradient(90deg," + T.goldD + "," + T.gold + ")",
+          transition: "width .7s",
         }} />
       </div>
-      {next && (
-        <div style={{ fontSize: 11, color: T.gray2, fontFamily: T.fonts.body }}>
-          {xpToNext.toLocaleString("fr-FR")} XP vers {next.icon}{" "}
-          <strong style={{ color: T.gold }}>{next.name}</strong>
+      {nxt && (
+        <div style={{ fontSize: 11, color: T.muted }}>
+          {fmt(toNext)} XP manquants vers {nxt.icon}{" "}
+          <strong style={{ color: T.gold }}>{nxt.name}</strong>
         </div>
       )}
     </div>
@@ -141,17 +140,17 @@ export function XPBar({ xp, compact = false }) {
 }
 
 export function LevelBadge({ xp }) {
-  const { getLevelInfo } = useAuth();
-  const { current } = getLevelInfo(xp);
+  const { levelOf } = useAuth();
+  const { cur } = levelOf(xp || 0);
   return (
     <span style={{
       display: "inline-flex", alignItems: "center", gap: 5,
-      background: "rgba(232,160,32,0.12)", color: T.gold,
-      border: `1px solid ${T.gold}44`,
+      background: T.goldBg, color: T.gold,
+      border: "1px solid " + T.gold + "44",
       borderRadius: 20, padding: "3px 10px",
-      fontSize: 11, fontWeight: 700, fontFamily: T.fonts.body,
+      fontSize: 11, fontWeight: 700,
     }}>
-      {current.icon} {current.name}
+      {cur.icon} {cur.name}
     </span>
   );
 }

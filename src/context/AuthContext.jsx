@@ -1,202 +1,242 @@
 import { createContext, useContext, useEffect, useState, useCallback } from "react";
 
-// Theme FoutaX
-export const FOUTAX_THEME = {
-  night:    "#0A1628",
-  navy:     "#0F1F38",
-  navy2:    "#162840",
-  gold:     "#E8A020",
-  goldDark: "#C88A10",
-  goldPale: "#FBF0DC",
-  green:    "#3DCF8E",
-  red:      "#F06060",
-  ivory:    "#F5F2EC",
-  gray1:    "#E8E4DC",
-  gray2:    "#9CA3AF",
-  gray3:    "#6B7280",
-  white:    "#FFFFFF",
-  fonts: {
-    display: "'Syne', sans-serif",
-    body:    "'DM Sans', sans-serif",
-  },
+// ─── THEME ────────────────────────────────────────────────────────────────────
+export const T = {
+  night:"#0A1628", navy:"#0C1D35", card:"#111E33", card2:"#0F2240",
+  gold:"#E8A020", goldD:"#C88A10", goldL:"#F5C355",
+  goldBg:"rgba(232,160,32,0.08)",
+  green:"#22C55E", greenD:"#16A34A", greenBg:"rgba(34,197,94,0.1)",
+  red:"#EF4444", redBg:"rgba(239,68,68,0.1)",
+  blue:"#3B82F6", blueBg:"rgba(59,130,246,0.1)",
+  purple:"#8B5CF6", cyan:"#06B6D4",
+  white:"#FFFFFF", off:"rgba(255,255,255,0.85)",
+  muted:"rgba(255,255,255,0.5)", faint:"rgba(255,255,255,0.2)",
+  border:"rgba(255,255,255,0.07)", borderH:"rgba(255,255,255,0.14)",
+  syne:"'Syne',sans-serif", dm:"'DM Sans',sans-serif",
 };
 
+// ─── NIVEAUX ──────────────────────────────────────────────────────────────────
 export const LEVELS = [
-  { level: 1, name: "Epargnant",         xpMin: 0,     icon: "🌱", color: "#9CA3AF" },
-  { level: 2, name: "Initie UEMOA",      xpMin: 500,   icon: "📖", color: "#6B7280" },
-  { level: 3, name: "Analyste Junior",   xpMin: 1000,  icon: "🔍", color: "#3DCF8E" },
-  { level: 4, name: "Analyste Confirme", xpMin: 1500,  icon: "📊", color: "#3DCF8E" },
-  { level: 5, name: "Trader",            xpMin: 2500,  icon: "⚡", color: "#E8A020" },
-  { level: 6, name: "Gerant",            xpMin: 4000,  icon: "💼", color: "#E8A020" },
-  { level: 7, name: "Expert FoutaX",     xpMin: 6000,  icon: "🏅", color: "#C88A10" },
-  { level: 8, name: "Legende",           xpMin: 10000, icon: "👑", color: "#E8A020" },
+  { level:1, name:"Epargnant",     xpMin:0,     icon:"🌱" },
+  { level:2, name:"Initie UEMOA",  xpMin:500,   icon:"📖" },
+  { level:3, name:"Analyste Jr",   xpMin:1000,  icon:"🔍" },
+  { level:4, name:"Analyste",      xpMin:1500,  icon:"📊" },
+  { level:5, name:"Trader",        xpMin:2500,  icon:"⚡" },
+  { level:6, name:"Gerant",        xpMin:4000,  icon:"💼" },
+  { level:7, name:"Expert FoutaX", xpMin:6000,  icon:"🏅" },
+  { level:8, name:"Legende",       xpMin:10000, icon:"👑" },
 ];
 
-export const XP_REWARDS = {
-  LOGIN_DAILY:      50,
-  COURSE_COMPLETE:  200,
-  QUIZ_PASS:        100,
-  ASSET_ANALYZE:    30,
-  PORTFOLIO_BUY:    20,
-  CHALLENGE_WIN:    500,
-  CHALLENGE_SUBMIT: 80,
-  PROFILE_COMPLETE: 150,
-  REFERRAL:         300,
-  STREAK_BONUS:     25,
+export const XP = {
+  LOGIN:50, COURSE:200, QUIZ:100, ANALYZE:30,
+  BUY:20, CHALLENGE:500, STREAK:25, PROFILE:150, DAILY:75,
 };
 
-export function getLevelInfo(xp) {
-  let current = LEVELS[0], next = LEVELS[1];
+// ─── UTILITAIRE NIVEAU ────────────────────────────────────────────────────────
+export function levelOf(xp) {
+  const safeXp = xp || 0;
+  let cur = LEVELS[0];
+  let nxt = LEVELS[1];
   for (let i = LEVELS.length - 1; i >= 0; i--) {
-    if (xp >= LEVELS[i].xpMin) {
-      current = LEVELS[i];
-      next = LEVELS[i + 1] || null;
+    if (safeXp >= LEVELS[i].xpMin) {
+      cur = LEVELS[i];
+      nxt = LEVELS[i + 1] || null;
       break;
     }
   }
-  const progress = next
-    ? Math.round(((xp - current.xpMin) / (next.xpMin - current.xpMin)) * 100)
+  const pct = nxt
+    ? Math.round(((safeXp - cur.xpMin) / (nxt.xpMin - cur.xpMin)) * 100)
     : 100;
-  return { current, next, progress, xpToNext: next ? next.xpMin - xp : 0 };
+  return { cur, nxt, pct, toNext: nxt ? nxt.xpMin - safeXp : 0 };
 }
 
+// ─── CONTEXTE ─────────────────────────────────────────────────────────────────
 const AuthContext = createContext(null);
 
 export function AuthProvider({ children }) {
-  const [user, setUser]       = useState(null);
+  const [user, setUser]     = useState(null);
   const [loading, setLoading] = useState(true);
-  const [toast, setToast]     = useState(null);
+  const [toast, setToast]   = useState(null);
+  const [notifs, setNotifs] = useState([]);
 
   useEffect(() => {
     try {
-      const stored = localStorage.getItem("foutax_user");
-      if (stored) setUser(JSON.parse(stored));
-    } catch {}
+      const s = localStorage.getItem("fx_user");
+      if (s) setUser(JSON.parse(s));
+    } catch (err) {}
     setLoading(false);
   }, []);
 
-  const persist = useCallback((u) => {
+  const save = useCallback((u) => {
     setUser(u);
-    localStorage.setItem("foutax_user", JSON.stringify(u));
+    try { localStorage.setItem("fx_user", JSON.stringify(u)); } catch (err) {}
   }, []);
 
-  const showToast = (msg, xp, type = "xp") => {
-    setToast({ msg, xp, type });
-    setTimeout(() => setToast(null), 3500);
+  const ping = (msg, xp, type) => {
+    const id = Date.now();
+    const safeXp = xp || 0;
+    const safeType = type || "xp";
+    setToast({ id, msg, xp: safeXp, type: safeType });
+    setNotifs((p) => [{ id, msg, xp: safeXp, type: safeType, ts: new Date() }, ...p.slice(0, 19)]);
+    setTimeout(() => setToast(null), 3800);
   };
 
-  const register = useCallback(async ({ name, email, password, country = "CI" }) => {
-    const newUser = {
-      id: crypto.randomUUID(), name, email, country,
+  const register = useCallback(async ({ name, email, country }) => {
+    const safeCountry = country || "CI";
+    const u = {
+      id: Date.now().toString(36) + Math.random().toString(36).slice(2),
+      name,
+      email,
+      country: safeCountry,
       avatar: name.slice(0, 2).toUpperCase(),
-      plan: "free", xp: 0, badges: [], streak: 0,
+      plan: "free",
+      xp: 0,
+      badges: [],
+      streak: 0,
       lastLogin: new Date().toISOString(),
       joinedAt: new Date().toISOString(),
-      portfolio: { cash: 500000, positions: [] },
-      completedCourses: [], completedQuizzes: [],
-      analyzedAssets: [], weeklyChallenge: null,
+      portfolio: { cash: 500000, positions: [], history: [500000] },
+      completedCourses: [],
+      analyzedAssets: [],
+      watchlist: ["SONATEL", "PALM-CI", "BOA-CI"],
+      alerts: [],
+      dailyDone: false,
+      dailyStreak: 0,
     };
-    persist(newUser);
-    showToast("Bienvenue sur FoutaX !", XP_REWARDS.PROFILE_COMPLETE, "success");
-    return newUser;
-  }, [persist]);
+    save(u);
+    ping("Bienvenue sur FoutaX !", XP.PROFILE, "success");
+    return u;
+  }, [save]);
 
   const login = useCallback(async ({ email }) => {
-    const stored = localStorage.getItem("foutax_user");
-    if (!stored) throw new Error("Aucun compte trouve. Veuillez vous inscrire.");
-    const u = JSON.parse(stored);
+    let s = null;
+    try { s = localStorage.getItem("fx_user"); } catch (err) {}
+    if (!s) throw new Error("Aucun compte trouve. Veuillez vous inscrire.");
+    const u = JSON.parse(s);
     if (u.email !== email) throw new Error("Email ou mot de passe incorrect.");
     const today = new Date();
     const diff = Math.floor((today - new Date(u.lastLogin)) / 86400000);
     const streak = diff === 1 ? (u.streak || 0) + 1 : diff > 1 ? 1 : u.streak;
-    const updated = { ...u, lastLogin: today.toISOString(), streak };
-    persist(updated);
-    if (diff === 1) showToast(`Streak ${streak}j 🔥`, XP_REWARDS.STREAK_BONUS * Math.min(streak, 7), "streak");
-    return addXP(updated, XP_REWARDS.LOGIN_DAILY);
-  }, [persist]);
+    const upd = { ...u, lastLogin: today.toISOString(), streak, dailyDone: false };
+    save(upd);
+    if (diff === 1) {
+      ping("Streak " + streak + " jours !", XP.STREAK * Math.min(streak, 7), "streak");
+    }
+    return gainXP(upd, XP.LOGIN);
+  }, [save]);
 
   const logout = useCallback(() => {
     setUser(null);
-    localStorage.removeItem("foutax_user");
+    try { localStorage.removeItem("fx_user"); } catch (err) {}
   }, []);
 
-  const addXP = useCallback(async (base, amount) => {
+  const gainXP = useCallback(async (base, amount, reason) => {
     const u = base || user;
-    if (!u) return;
-    const oldLevel = getLevelInfo(u.xp).current.level;
-    const newXP = (u.xp || 0) + amount;
-    const newLevel = getLevelInfo(newXP).current;
-    const updated = { ...u, xp: newXP };
-    persist(updated);
-    if (newLevel.level > oldLevel)
-      showToast(`Niveau ${newLevel.level} debloque ! ${newLevel.icon} ${newLevel.name}`, amount, "levelup");
-    return updated;
-  }, [user, persist]);
+    if (!u) return null;
+    const old = levelOf(u.xp).cur.level;
+    const nxp = (u.xp || 0) + amount;
+    const nlvl = levelOf(nxp).cur;
+    const upd = { ...u, xp: nxp };
+    save(upd);
+    if (nlvl.level > old) {
+      ping("Niveau " + nlvl.level + " debloque ! " + nlvl.icon + " " + nlvl.name, amount, "levelup");
+    } else if (reason) {
+      ping(reason, amount, "xp");
+    }
+    return upd;
+  }, [user, save]);
 
-  const earnBadge = useCallback((id, name) => {
-    if (!user || user.badges.includes(id)) return;
-    const updated = { ...user, badges: [...user.badges, id] };
-    persist(updated);
-    showToast(`Badge debloque : ${name} !`, 0, "badge");
-  }, [user, persist]);
+  const giveBadge = useCallback((id, name) => {
+    if (!user || (user.badges && user.badges.includes(id))) return;
+    const upd = { ...user, badges: [...(user.badges || []), id] };
+    save(upd);
+    ping("Badge debloque : " + name + " !", 0, "badge");
+  }, [user, save]);
 
-  const trackAction = useCallback(async (action, payload = {}) => {
-    if (!user) return;
-    let updated = { ...user };
+  const act = useCallback(async (action, payload) => {
+    if (!user) return null;
+    const p = payload || {};
+    const u = { ...user };
     let xp = 0;
+
     switch (action) {
-      case "ASSET_ANALYZE":
-        if (!updated.analyzedAssets.includes(payload.ticker)) {
-          updated.analyzedAssets = [...updated.analyzedAssets, payload.ticker];
-          xp = XP_REWARDS.ASSET_ANALYZE;
-          if (updated.analyzedAssets.length >= 5) earnBadge("analyste", "Analyste");
+      case "ANALYZE": {
+        const assets = u.analyzedAssets || [];
+        if (!assets.includes(p.ticker)) {
+          u.analyzedAssets = [...assets, p.ticker];
+          xp = XP.ANALYZE;
+          if (u.analyzedAssets.length >= 3) giveBadge("analyste", "Analyste");
+          if (u.analyzedAssets.length >= 10) giveBadge("expert", "Expert Marche");
         }
         break;
-      case "COURSE_COMPLETE":
-        if (!updated.completedCourses.includes(payload.courseId)) {
-          updated.completedCourses = [...updated.completedCourses, payload.courseId];
-          xp = XP_REWARDS.COURSE_COMPLETE;
-          if (updated.completedCourses.length === 1) earnBadge("studieux", "Studieux");
-          if (updated.completedCourses.length >= 4) earnBadge("certifie", "Certifie FoutaX");
+      }
+      case "COURSE": {
+        const courses = u.completedCourses || [];
+        if (!courses.includes(p.id)) {
+          u.completedCourses = [...courses, p.id];
+          xp = XP.COURSE;
+          if (u.completedCourses.length === 1) giveBadge("studieux", "Studieux");
+          if (u.completedCourses.length >= 4) giveBadge("certifie", "Certifie FoutaX");
         }
         break;
-      case "PORTFOLIO_BUY":
-        xp = XP_REWARDS.PORTFOLIO_BUY;
-        if (!updated.portfolio.positions?.length) earnBadge("premier_achat", "Premier achat");
-        updated.portfolio = payload.portfolio;
+      }
+      case "BUY": {
+        xp = XP.BUY;
+        const pos = (u.portfolio && u.portfolio.positions) ? u.portfolio.positions : [];
+        if (pos.length === 0) giveBadge("first_buy", "Premier Achat");
+        u.portfolio = p.portfolio;
         break;
-      case "CHALLENGE_SUBMIT":
-        xp = XP_REWARDS.CHALLENGE_SUBMIT;
-        updated.weeklyChallenge = payload.prediction;
+      }
+      case "DAILY": {
+        if (!u.dailyDone) {
+          xp = XP.DAILY;
+          u.dailyDone = true;
+          u.dailyStreak = (u.dailyStreak || 0) + 1;
+          if (u.dailyStreak >= 7) giveBadge("daily_7", "7 jours de suite");
+        }
+        break;
+      }
+      case "WATCHLIST": {
+        u.watchlist = p.list;
+        break;
+      }
+      default:
         break;
     }
-    if (xp > 0) { persist(updated); await addXP(updated, xp); }
-    else persist(updated);
-  }, [user, persist, addXP, earnBadge]);
 
-  const upgradePlan = useCallback((plan) => {
+    if (xp > 0) {
+      save(u);
+      return gainXP(u, xp);
+    }
+    save(u);
+    return u;
+  }, [user, save, gainXP, giveBadge]);
+
+  const upgrade = useCallback((plan) => {
     if (!user) return;
-    persist({ ...user, plan });
-    showToast(`Plan ${plan.toUpperCase()} active !`, 500, "success");
-  }, [user, persist]);
+    save({ ...user, plan });
+    ping("Plan " + plan.toUpperCase() + " active !", 500, "success");
+  }, [user, save]);
+
+  const value = {
+    user, loading, toast, notifs,
+    register, login, logout,
+    gainXP, giveBadge, act, upgrade,
+    levelOf,
+    isAuth: !!user,
+    isPrem: user ? (user.plan === "gold" || user.plan === "pro") : false,
+    isPro: user ? user.plan === "pro" : false,
+  };
 
   return (
-    <AuthContext.Provider value={{
-      user, loading, toast,
-      register, login, logout,
-      addXP, earnBadge, trackAction, upgradePlan,
-      getLevelInfo,
-      isAuthenticated: !!user,
-      isPremium: user?.plan === "gold" || user?.plan === "pro",
-      isPro: user?.plan === "pro",
-    }}>
+    <AuthContext.Provider value={value}>
       {children}
     </AuthContext.Provider>
   );
 }
 
 export function useAuth() {
-  const ctx = useContext(AuthContext);
-  if (!ctx) throw new Error("useAuth doit etre dans AuthProvider");
-  return ctx;
+  const c = useContext(AuthContext);
+  if (!c) throw new Error("useAuth doit etre dans AuthProvider");
+  return c;
 }
