@@ -1,39 +1,9 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { AuthProvider, useAuth, LEVELS, levelOf } from "./context/AuthContext";
 import { T } from "./context/theme";
+import { XPToast } from "./components/XPToast";
+import { SpeedInsights } from "@vercel/speed-insights/react";
 
-// ─── CSS GLOBAL ───────────────────────────────────────────────────────────────
-const CSS = `
-@import url('https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:ital,wght@0,300;0,400;0,500;0,600;1,400&display=swap');
-@import url('https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.2.0/tabler-icons.min.css');
-*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
-html{scroll-behavior:smooth}
-body{background:#0A1628;color:#fff;font-family:'DM Sans',sans-serif;-webkit-font-smoothing:antialiased;overflow-x:hidden}
-::-webkit-scrollbar{width:4px}::-webkit-scrollbar-track{background:#0A1628}
-::-webkit-scrollbar-thumb{background:#1E3A5F;border-radius:2px}
-::-webkit-scrollbar-thumb:hover{background:#E8A020}
-button{cursor:pointer;font-family:'DM Sans',sans-serif;transition:all .18s ease}
-input,select,textarea{font-family:'DM Sans',sans-serif}
-input::placeholder{color:rgba(255,255,255,0.25)}
-select option{background:#0C1D35;color:#fff}
-::selection{background:rgba(232,160,32,0.3)}
-*{-webkit-tap-highlight-color:transparent}
-@keyframes fadeUp{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:translateY(0)}}
-@keyframes fadeIn{from{opacity:0}to{opacity:1}}
-@keyframes scaleIn{from{opacity:0;transform:scale(.92)}to{opacity:1;transform:scale(1)}}
-@keyframes slideRight{from{transform:translateX(-100%)}to{transform:translateX(0)}}
-@keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
-@keyframes spin{to{transform:rotate(360deg)}}
-@keyframes bounce{0%,100%{transform:translateY(0)}50%{transform:translateY(-8px)}}
-@keyframes countUp{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}
-@keyframes glow{0%,100%{box-shadow:0 0 8px rgba(232,160,32,.3)}50%{box-shadow:0 0 20px rgba(232,160,32,.6)}}
-@keyframes starPop{0%{transform:scale(0)rotate(-30deg)}60%{transform:scale(1.3)rotate(5deg)}100%{transform:scale(1)rotate(0)}}
-@keyframes barFill{from{width:0}to{width:var(--w)}}
-.animate-up{animation:fadeUp .4s ease forwards}
-.animate-in{animation:scaleIn .3s ease forwards}
-.animate-count{animation:countUp .5s ease forwards}
-.glow-gold{animation:glow 2s ease infinite}
-`;
 
 // ─── DATA ─────────────────────────────────────────────────────────────────────
 const STOCKS = [
@@ -226,39 +196,6 @@ function XPBar({xp, compact=false}) {
   );
 }
 
-// Toast XP
-function Toast() {
-  const {toast} = useAuth();
-  const [vis, setVis] = useState(false);
-  useEffect(() => { if(toast) setVis(true); else setTimeout(()=>setVis(false),400); }, [toast]);
-  if(!vis && !toast) return null;
-  const cfg = {
-    xp:      {border:T.gold,    text:T.gold,    prefix:"+"},
-    streak:  {border:"#F97316", text:"#F97316",  prefix:"🔥 +"},
-    levelup: {border:T.green,   text:T.green,   prefix:"🎉 "},
-    badge:   {border:T.purple,  text:"#A78BFA",  prefix:"🏅 "},
-    success: {border:T.green,   text:T.green,   prefix:"✓ "},
-  }[toast?.type||"xp"];
-  return (
-    <div style={{
-      position:"fixed", bottom:80, right:16, zIndex:9999,
-      background:"#0F2240", border:`1px solid ${cfg.border}44`,
-      borderRadius:14, padding:"12px 16px",
-      display:"flex", alignItems:"center", gap:12,
-      minWidth:220, maxWidth:310,
-      opacity:toast?1:0, transform:toast?"translateY(0)":"translateY(16px)",
-      transition:"all .3s", pointerEvents:"none",
-      boxShadow:`0 8px 40px rgba(0,0,0,.5), 0 0 0 1px ${cfg.border}22`,
-    }}>
-      <div style={{flex:1, fontSize:13, color:T.white, fontWeight:500}}>{toast?.msg}</div>
-      {toast?.xp>0 && (
-        <div style={{background:cfg.border, color:T.night, fontSize:11, fontWeight:800, padding:"3px 10px", borderRadius:20, fontFamily:T.syne, flexShrink:0}}>
-          {cfg.prefix}{toast.xp} XP
-        </div>
-      )}
-    </div>
-  );
-}
 
 // ─── AUTH PAGE ────────────────────────────────────────────────────────────────
 function AuthPage() {
@@ -1806,27 +1743,19 @@ function Dashboard() {
 function Inner() {
   const {isAuth, loading} = useAuth();
   if(loading) return <Loading/>;
-  return <>{isAuth ? <Dashboard/> : <AuthPage/>}<Toast/></>;
+  return (
+    <>
+      {isAuth ? <Dashboard/> : <AuthPage/>}
+      <XPToast />
+    </>
+  );
 }
 
 export default function App() {
   return (
     <AuthProvider>
-      <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:wght@300;400;500;600&display=swap');
-        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-        body { background: #0A1628; color: #FFFFFF; }
-        ::-webkit-scrollbar { width: 6px; }
-        ::-webkit-scrollbar-track { background: #0A1628; }
-        ::-webkit-scrollbar-thumb { background: #2A3A55; border-radius: 3px; }
-        ::-webkit-scrollbar-thumb:hover { background: #E8A020; }
-        input::placeholder { color: rgba(255,255,255,0.2); }
-        select option { background: #0F1F38; }
-      `}</style>
-      <AppInner />
+      <Inner />
       <SpeedInsights />
     </AuthProvider>
   );
-  return <AuthProvider><AppInner /></AuthProvider>;
-  return <AuthProvider><Inner/></AuthProvider>;
 }
