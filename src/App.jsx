@@ -1,4 +1,9 @@
 import { useState, useEffect, useRef, useCallback } from "react";
+import { AuthProvider, useAuth, LEVELS, levelOf } from "./context/AuthContext";
+import { T } from "./context/theme";
+import { XPToast } from "./components/XPToast";
+import { SpeedInsights } from "@vercel/speed-insights/react";
+import { STOCKS, BOURSES, NEWS, COURSES, KIDS_LESSONS, KIDS_QUIZ_DB, fmt, fmtFcfa, genSparkData } from "./data";
 import { AuthProvider, useAuth, T, LEVELS, levelOf } from "./context/AuthContext";
 
 
@@ -67,17 +72,8 @@ const KIDS_QUIZ_DB = {
   ],
 };
 
-// ─── UTILITAIRES ──────────────────────────────────────────────────────────────
-const fmt = n => typeof n==="number" ? n.toLocaleString("fr-FR") : n;
-const fmtFcfa = n => `${fmt(n)} FCFA`;
 
-function genSparkData(len=20, up=true, volatility=0.08) {
-  let v = 50;
-  return Array.from({length:len}, (_,i) => {
-    v += (Math.random()-0.47)*volatility*100 + (up ? 0.3 : -0.3);
-    return Math.max(10, Math.min(90, v));
-  });
-}
+// data moved to ./data.js
 
 // ─── MICRO COMPOSANTS ─────────────────────────────────────────────────────────
 const Chip = ({children, color=T.gold, bg, size=11}) => (
@@ -194,49 +190,25 @@ function XPBar({xp, compact=false}) {
   );
 }
 
-// Toast XP
-function Toast() {
-  const {toast} = useAuth();
-  const [vis, setVis] = useState(false);
-  useEffect(() => { if(toast) setVis(true); else setTimeout(()=>setVis(false),400); }, [toast]);
-  if(!vis && !toast) return null;
-  const cfg = {
-    xp:      {border:T.gold,    text:T.gold,    prefix:"+"},
-    streak:  {border:"#F97316", text:"#F97316",  prefix:"🔥 +"},
-    levelup: {border:T.green,   text:T.green,   prefix:"🎉 "},
-    badge:   {border:T.purple,  text:"#A78BFA",  prefix:"🏅 "},
-    success: {border:T.green,   text:T.green,   prefix:"✓ "},
-  }[toast?.type||"xp"];
-  return (
-    <div style={{
-      position:"fixed", bottom:80, right:16, zIndex:9999,
-      background:"#0F2240", border:`1px solid ${cfg.border}44`,
-      borderRadius:14, padding:"12px 16px",
-      display:"flex", alignItems:"center", gap:12,
-      minWidth:220, maxWidth:310,
-      opacity:toast?1:0, transform:toast?"translateY(0)":"translateY(16px)",
-      transition:"all .3s", pointerEvents:"none",
-      boxShadow:`0 8px 40px rgba(0,0,0,.5), 0 0 0 1px ${cfg.border}22`,
-    }}>
-      <div style={{flex:1, fontSize:13, color:T.white, fontWeight:500}}>{toast?.msg}</div>
-      {toast?.xp>0 && (
-        <div style={{background:cfg.border, color:T.night, fontSize:11, fontWeight:800, padding:"3px 10px", borderRadius:20, fontFamily:T.syne, flexShrink:0}}>
-          {cfg.prefix}{toast.xp} XP
-        </div>
-      )}
-    </div>
-  );
-}
 
 // ─── AUTH PAGE ────────────────────────────────────────────────────────────────
 function AuthPage() {
-  const {register, login} = useAuth();
+  const {register, login, ping} = useAuth();
   const [mode, setMode] = useState("login");
   const [form, setForm] = useState({name:"",email:"",password:"",confirm:"",country:"CI"});
   const [errs, setErrs] = useState({});
   const [loading, setLoading] = useState(false);
   const [serverErr, setServerErr] = useState("");
   const set = k => e => setForm(f=>({...f,[k]:e.target.value}));
+
+  useEffect(()=>{
+    // autofocus email on mount
+    const t = setTimeout(()=>{
+      const el = document.getElementById('field-email');
+      if(el && typeof el.focus === 'function') el.focus();
+    }, 60);
+    return ()=>clearTimeout(t);
+  }, []);
 
   const validate = () => {
     const e={};
@@ -249,12 +221,24 @@ function AuthPage() {
 
   const submit = async () => {
     const e=validate(); setErrs(e);
-    if(Object.keys(e).length) return;
+    if(Object.keys(e).length) {
+      // focus first invalid field for accessibility
+      const first = Object.keys(e)[0];
+      setTimeout(()=>{
+        const el = document.getElementById(`field-${first}`);
+        if(el && typeof el.focus === 'function') el.focus();
+      }, 40);
+      return;
+    }
     setLoading(true); setServerErr("");
     try {
       if(mode==="register") await register(form);
       else await login(form);
-    } catch(err) { setServerErr(err.message); }
+      // success: clear server error
+      setServerErr("");
+      // focus body to move context on success
+      setTimeout(()=>{document.body.focus();},100);
+    } catch(err) { setServerErr(err.message); if(typeof ping==='function') ping(err.message, 0, 'error'); }
     finally { setLoading(false); }
   };
 
@@ -270,8 +254,10 @@ function AuthPage() {
       <div style={{marginBottom:14}}>
         <div style={{fontSize:10, color:T.muted, fontWeight:600, textTransform:"uppercase", letterSpacing:"0.7px", marginBottom:5}}>{label}</div>
         {children || <input
-          type={type} value={form[k]} onChange={set(k)} placeholder={placeholder}
+          id={`field-${k}`} type={type} value={form[k]} onChange={set(k)} placeholder={placeholder}
           onFocus={()=>setFocus(true)} onBlur={()=>setFocus(false)}
+          aria-invalid={!!errs[k]}
+          aria-describedby={errs[k]?`err-${k}`:undefined}
           style={{
             width:"100%", padding:"11px 14px", borderRadius:10, fontSize:13,
             background:"rgba(255,255,255,0.05)", color:T.white, outline:"none",
@@ -279,16 +265,18 @@ function AuthPage() {
             transition:"border .2s",
           }}
         />}
-        {errs[k] && <div style={{fontSize:11, color:T.red, marginTop:4}}>{errs[k]}</div>}
+        {errs[k] && <div id={`err-${k}`} style={{fontSize:11, color:T.red, marginTop:4}}>{errs[k]}</div>}
       </div>
     );
   };
 
   return (
+    <div className="fx-auth-layout" style={{minHeight:"100vh", display:"flex"}}>
+      <style>{CSS}</style>
     <div style={{minHeight:"100vh", display:"flex"}}>
       
       {/* Panel gauche branding */}
-      <div style={{
+      <div className="fx-auth-left" style={{
         flex:1, background:`linear-gradient(145deg,${T.night} 0%,${T.navy2} 100%)`,
         display:"flex", flexDirection:"column", justifyContent:"center",
         padding:"48px 44px", position:"relative", overflow:"hidden",
@@ -350,7 +338,7 @@ function AuthPage() {
       </div>
 
       {/* Panel droit formulaire */}
-      <div style={{width:460,background:T.navy,display:"flex",alignItems:"center",justifyContent:"center",padding:"40px 36px"}}>
+      <div className="fx-auth-right" style={{width:460,background:T.navy,display:"flex",alignItems:"center",justifyContent:"center",padding:"40px 36px"}}>
         <div style={{width:"100%",maxWidth:370}}>
           <div style={{marginBottom:28}}>
             <h2 style={{fontFamily:T.syne,fontSize:26,fontWeight:800,color:T.white,marginBottom:6,letterSpacing:"-0.5px"}}>
@@ -362,7 +350,7 @@ function AuthPage() {
           </div>
 
           {serverErr && (
-            <div style={{background:T.redBg,border:`1px solid ${T.red}44`,borderRadius:10,padding:"10px 14px",fontSize:12,color:T.red,marginBottom:16}}>
+            <div role="alert" style={{background:T.redBg,border:`1px solid ${T.red}44`,borderRadius:10,padding:"10px 14px",fontSize:12,color:T.red,marginBottom:16}}>
               {serverErr}
             </div>
           )}
@@ -381,7 +369,9 @@ function AuthPage() {
 
           {mode==="login" && (
             <div style={{textAlign:"right",marginBottom:16,marginTop:-6}}>
-              <span style={{fontSize:12,color:T.gold,cursor:"pointer"}}>Mot de passe oublié ?</span>
+              <button onClick={()=>{ if(typeof ping==='function') ping('Fonctionnalité non implémentée',0,'error'); }} style={{fontSize:12,color:T.gold,cursor:"pointer",background:"transparent",border:"none"}}>
+                Mot de passe oublié ?
+              </button>
             </div>
           )}
 
@@ -425,6 +415,13 @@ function Navbar({active, setActive}) {
 
   const go = id => { setActive(id); setMenu(false); setNotifOpen(false); setProfOpen(false); };
 
+  // close mobile menu on Escape
+  useEffect(() => {
+    const onKey = (e) => { if (e.key === 'Escape') setMenu(false); };
+    if (menu) window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [menu]);
+
   return (
     <>
       <nav style={{
@@ -442,7 +439,7 @@ function Navbar({active, setActive}) {
           </div>
 
           {/* Desktop tabs */}
-          <div style={{display:"flex",gap:1,alignItems:"center"}}>
+          <div className="fx-desktop-tabs" style={{display:"flex",gap:1,alignItems:"center"}}>
             {TABS.map(t=>(
               <button key={t.id} onClick={()=>go(t.id)} style={{
                 background:active===t.id?T.goldBg:"transparent",
@@ -507,28 +504,33 @@ function Navbar({active, setActive}) {
           </div>
         </div>
 
-        {/* Mobile menu */}
+        {/* Mobile menu (drawer) */}
         {menu && (
-          <div style={{background:T.night,borderTop:`1px solid ${T.border}`,padding:"8px 12px 16px"}}>
-            <div style={{marginBottom:12}}><XPBar xp={user?.xp||0} compact/></div>
-            {TABS.map(t=>(
-              <button key={t.id} onClick={()=>go(t.id)} style={{
-                display:"flex",alignItems:"center",gap:12,width:"100%",
-                padding:"12px 14px",marginBottom:4,borderRadius:10,
-                background:active===t.id?T.goldBg:"rgba(255,255,255,0.03)",
-                border:active===t.id?`1px solid ${T.gold}25`:"1px solid transparent",
-                color:active===t.id?T.gold:T.off,
-                fontSize:14,fontWeight:active===t.id?700:400,textAlign:"left",
-              }}>
-                <i className={`ti ${t.icon}`} style={{fontSize:18}}/>{t.label}
-              </button>
-            ))}
+          <div role="dialog" aria-label="Menu" className="fx-drawer" onClick={()=>setMenu(false)}>
+            <div className="fx-drawer-card" onClick={e=>e.stopPropagation()}>
+              <div style={{marginBottom:12}}><XPBar xp={user?.xp||0} compact/></div>
+              {TABS.map(t=>(
+                <button key={t.id} onClick={()=>go(t.id)} style={{
+                  display:"flex",alignItems:"center",gap:12,width:"100%",
+                  padding:"12px 14px",marginBottom:8,borderRadius:10,textAlign:"left",
+                  background:active===t.id?T.goldBg:"transparent",
+                  border:active===t.id?`1px solid ${T.gold}25`:`1px solid transparent`,
+                  color:active===t.id?T.gold:T.off,fontSize:15,fontWeight:active===t.id?700:600,
+                }}>
+                  <i className={`ti ${t.icon}`} style={{fontSize:18}}/>
+                  {t.label}
+                </button>
+              ))}
+              <div style={{marginTop:8,display:"flex",gap:8}}>
+                <Btn variant="outline" onClick={()=>setMenu(false)}>Fermer</Btn>
+              </div>
+            </div>
           </div>
         )}
       </nav>
 
       {/* Bottom nav mobile */}
-      <div style={{position:"fixed",bottom:0,left:0,right:0,background:"rgba(6,14,26,0.98)",backdropFilter:"blur(20px)",borderTop:`1px solid ${T.border}`,display:"flex",zIndex:150,padding:"4px 0 max(8px,env(safe-area-inset-bottom))"}}>
+      <div className="fx-mobile-bottom" style={{position:"fixed",bottom:0,left:0,right:0,background:"rgba(6,14,26,0.98)",backdropFilter:"blur(20px)",borderTop:`1px solid ${T.border}`,display:"flex",zIndex:150,padding:"4px 0 max(8px,env(safe-area-inset-bottom))"}}>
         {TABS.map(t=>(
           <button key={t.id} onClick={()=>go(t.id)} style={{
             flex:1,display:"flex",flexDirection:"column",alignItems:"center",gap:3,
@@ -1737,9 +1739,19 @@ function Dashboard() {
 function Inner() {
   const {isAuth, loading} = useAuth();
   if(loading) return <Loading/>;
-  return <>{isAuth ? <Dashboard/> : <AuthPage/>}<Toast/></>;
+  return (
+    <>
+      {isAuth ? <Dashboard/> : <AuthPage/>}
+      <XPToast />
+    </>
+  );
 }
 
 export default function App() {
-  return <AuthProvider><Inner/></AuthProvider>;
+  return (
+    <AuthProvider>
+      <Inner />
+      <SpeedInsights />
+    </AuthProvider>
+  );
 }

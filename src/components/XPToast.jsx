@@ -1,8 +1,9 @@
 import { useEffect, useState } from "react";
-import { useAuth, LEVELS, T } from "../context/AuthContext";
+import { useAuth, LEVELS } from "../context/AuthContext";
+import { T } from "../context/theme";
 
 export function XPToast() {
-  const { toast } = useAuth();
+  const { toast, clearToast } = useAuth();
   const [visible, setVisible] = useState(false);
 
   useEffect(() => {
@@ -18,22 +19,30 @@ export function XPToast() {
     levelup: { border: T.green,   text: T.green,   prefix: "🎉 " },
     badge:   { border: T.purple,  text: "#A78BFA",  prefix: "🏅 " },
     success: { border: T.green,   text: T.green,   prefix: "✓ " },
+    error:   { border: T.red,     text: T.red,     prefix: "⚠️ " },
   };
   const cfg = cfgs[toast ? toast.type : "xp"] || cfgs.xp;
 
   return (
-    <div style={{
-      position: "fixed", bottom: 80, right: 16, zIndex: 9999,
-      background: "#0F2240",
-      border: "1px solid " + cfg.border + "44",
-      borderRadius: 14, padding: "12px 16px",
-      display: "flex", alignItems: "center", gap: 12,
-      minWidth: 220, maxWidth: 310,
-      opacity: toast ? 1 : 0,
-      transform: toast ? "translateY(0)" : "translateY(16px)",
-      transition: "all .3s",
-      pointerEvents: "none",
-    }}>
+    <div
+      role="status"
+      aria-live="polite"
+      aria-atomic="true"
+      tabIndex={0}
+      className="fx-toast"
+      style={{
+        position: "fixed", bottom: 80, right: 16, zIndex: 9999,
+        background: "#0F2240",
+        border: "1px solid " + cfg.border + "44",
+        borderRadius: 14, padding: "12px 16px",
+        display: "flex", alignItems: "center", gap: 12,
+        minWidth: 220, maxWidth: 310,
+        opacity: toast ? 1 : 0,
+        transform: toast ? "translateY(0)" : "translateY(16px)",
+        transition: "all .3s",
+        pointerEvents: toast ? "auto" : "none",
+      }}
+    >
       <div style={{ flex: 1, fontSize: 13, color: T.white, fontWeight: 500 }}>
         {toast ? toast.msg : ""}
       </div>
@@ -47,6 +56,17 @@ export function XPToast() {
           {cfg.prefix}{toast.xp} XP
         </div>
       )}
+      <button
+        aria-label="Fermer la notification"
+        onClick={() => { clearToast(); setVisible(false); }}
+        style={{
+          marginLeft: 8, background: "transparent", border: "none",
+          color: T.muted, cursor: "pointer", padding: 6, borderRadius: 8,
+          alignSelf: "flex-start",
+        }}
+      >
+        ✕
+      </button>
     </div>
   );
 }

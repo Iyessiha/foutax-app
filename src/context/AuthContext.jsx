@@ -1,19 +1,5 @@
 import { createContext, useContext, useEffect, useState, useCallback } from "react";
-
-// ─── THEME ────────────────────────────────────────────────────────────────────
-export const T = {
-  night:"#0A1628", navy:"#0C1D35", card:"#111E33", card2:"#0F2240",
-  gold:"#E8A020", goldD:"#C88A10", goldL:"#F5C355",
-  goldBg:"rgba(232,160,32,0.08)",
-  green:"#22C55E", greenD:"#16A34A", greenBg:"rgba(34,197,94,0.1)",
-  red:"#EF4444", redBg:"rgba(239,68,68,0.1)",
-  blue:"#3B82F6", blueBg:"rgba(59,130,246,0.1)",
-  purple:"#8B5CF6", cyan:"#06B6D4",
-  white:"#FFFFFF", off:"rgba(255,255,255,0.85)",
-  muted:"rgba(255,255,255,0.5)", faint:"rgba(255,255,255,0.2)",
-  border:"rgba(255,255,255,0.07)", borderH:"rgba(255,255,255,0.14)",
-  syne:"'Syne',sans-serif", dm:"'DM Sans',sans-serif",
-};
+import { T } from "./theme";
 
 // ─── NIVEAUX ──────────────────────────────────────────────────────────────────
 export const LEVELS = [
@@ -81,12 +67,16 @@ export function AuthProvider({ children }) {
     setTimeout(() => setToast(null), 3800);
   };
 
-  const register = useCallback(async ({ name, email, country }) => {
+  const clearToast = useCallback(() => setToast(null), []);
+
+  const register = useCallback(async ({ name, email, country, password }) => {
     const safeCountry = country || "CI";
     const u = {
       id: Date.now().toString(36) + Math.random().toString(36).slice(2),
       name,
       email,
+      // NOTE: password stored in cleartext for local demo only
+      password: password || "",
       country: safeCountry,
       avatar: name.slice(0, 2).toUpperCase(),
       plan: "free",
@@ -108,12 +98,17 @@ export function AuthProvider({ children }) {
     return u;
   }, [save]);
 
-  const login = useCallback(async ({ email }) => {
+  const login = useCallback(async ({ email, password }) => {
     let s = null;
     try { s = localStorage.getItem("fx_user"); } catch (err) {}
     if (!s) throw new Error("Aucun compte trouve. Veuillez vous inscrire.");
     const u = JSON.parse(s);
     if (u.email !== email) throw new Error("Email ou mot de passe incorrect.");
+    // If a password was stored, require it and validate
+    if (u.password) {
+      if (!password) throw new Error("Mot de passe requis.");
+      if (u.password !== password) throw new Error("Email ou mot de passe incorrect.");
+    }
     const today = new Date();
     const diff = Math.floor((today - new Date(u.lastLogin)) / 86400000);
     const streak = diff === 1 ? (u.streak || 0) + 1 : diff > 1 ? 1 : u.streak;
@@ -122,7 +117,9 @@ export function AuthProvider({ children }) {
     if (diff === 1) {
       ping("Streak " + streak + " jours !", XP.STREAK * Math.min(streak, 7), "streak");
     }
-    return gainXP(upd, XP.LOGIN);
+    const res = await gainXP(upd, XP.LOGIN);
+    ping("Connecté — Bienvenue !", XP.LOGIN, "success");
+    return res;
   }, [save]);
 
   const logout = useCallback(() => {
@@ -221,7 +218,9 @@ export function AuthProvider({ children }) {
   const value = {
     user, loading, toast, notifs,
     register, login, logout,
+    ping,
     gainXP, giveBadge, act, upgrade,
+    clearToast,
     levelOf,
     isAuth: !!user,
     isPrem: user ? (user.plan === "gold" || user.plan === "pro") : false,
